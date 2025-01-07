@@ -1,6 +1,7 @@
-../Core/Src/main.c:77:5:main	176	static
-../Core/Src/main.c:176:6:SystemClock_Config	72	static
-../Core/Src/main.c:216:13:MX_CAN_Init	8	static
-../Core/Src/main.c:270:9:crc8	24	static
-../Core/Src/main.c:284:6:encodeDistance	16	static
-../Core/Src/main.c:299:6:Error_Handler	4	static,ignoring_inline_asm
+../Core/Src/main.c:78:5:main	176	static
+../Core/Src/main.c:161:6:SystemClock_Config	72	static
+../Core/Src/main.c:201:13:MX_CAN_Init	8	static
+../Core/Src/main.c:255:16:crc8	24	static
+../Core/Src/main.c:269:13:encodeNumber	16	static
+../Core/Src/main.c:274:17:getDistance	24	static
+../Core/Src/main.c:292:6:Error_Handler	4	static,ignoring_inline_asm

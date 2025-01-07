@@ -34,14 +34,17 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MAX_ANGLE 180
-#define MIN_ANGLE 0
+#define ANGLE_NORMAL 90
+#define ANGLE_LEFT 40
+#define ANGLE_RIGHT 140
 
 #define THRESHOLD 600
 
 typedef enum {
-	STRAIGHT = 0, TURN_LEFT, TURN_RIGHT,
-} MODE;
+	STRAIGHT = 0,
+	TURN_LEFT,
+	TURN_RIGHT,
+} Mode;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -62,7 +65,8 @@ UART_HandleTypeDef huart1;
 CAN_RxHeaderTypeDef RxHeader;
 uint8_t RxData[8];
 uint8_t datacheck = 0;
-MODE mode = STRAIGHT;
+
+Mode mode = STRAIGHT;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -80,23 +84,13 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 static void setAngle(uint8_t Angle);
-//static uint8_t crc8(uint8_t *data, uint8_t length);
-static void decodeNumber(uint16_t *distance1, uint16_t *distance2);
-void genPWM(TIM_HandleTypeDef *htim, uint32_t channel, float duty_cycle);
+static void genPWM(TIM_HandleTypeDef *htim, uint32_t channel, float duty_cycle);
+static void decodeNumber(uint16_t *distance1, uint8_t index);
+static uint8_t crc8(uint8_t *data, uint8_t length);
+static void controlMode();
 
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
-	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData);
-	if (RxHeader.StdId == 0x012) {
-		datacheck = 1;
-	}
-}
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-	if(htim->Instance == TIM2){
-		mode = STRAIGHT;
-		HAL_TIM_Base_Stop_IT(&htim2);
-	}
-}
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 /* USER CODE END 0 */
 
 /**
@@ -134,19 +128,8 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  CAN_FilterTypeDef canfilterconfig;
-
-  canfilterconfig.FilterActivation = CAN_FILTER_ENABLE;
-  canfilterconfig.FilterBank = 0;  // which filter bank to use from the assigned ones
-  canfilterconfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
-  canfilterconfig.FilterIdHigh = 0x012<<5;
-  canfilterconfig.FilterIdLow = 0x0000;
-  canfilterconfig.FilterMaskIdHigh = 0x012<<5;
-  canfilterconfig.FilterMaskIdLow = 0x0000;
-  canfilterconfig.FilterMode = CAN_FILTERMODE_IDMASK;
-  canfilterconfig.FilterScale = CAN_FILTERSCALE_32BIT;
-
-  HAL_CAN_ConfigFilter(&hcan, &canfilterconfig);
+  //	Initialize local variable
+	uint16_t Distance_Left, Distance_Right;
 
 	HAL_CAN_ActivateNotification(&hcan,
 	CAN_IT_RX_FIFO0_MSG_PENDING);
@@ -157,15 +140,9 @@ int main(void)
 
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
-
-//	Initialize local variable
-	uint16_t distance1, distance2;
-//	char msg[50];
-//	time_t time_counter, start_turning;
-//	uint16_t Turning_Duration = 2;
-
 	genPWM(&htim1, TIM_CHANNEL_4, 20);
+
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
 	//genPWM(&htim1, TIM_CHANNEL_1, 40);
   /* USER CODE END 2 */
 
@@ -175,44 +152,26 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//		time(&time_counter);
-		if (datacheck) {
+		if (datacheck == 1 && crc8(RxData, 4) == RxData[4]) {
 			datacheck = 0;
-			decodeNumber(&distance1, &distance2);
-//			sprintf(msg, "\n\rRev:\n\r%d\n\r%d", distance1, distance2);
-//			HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen(msg), 100);
+			decodeNumber(&Distance_Left, 0);
+			decodeNumber(&Distance_Right, 2);
 		}
-		if(distance1 <= THRESHOLD)
+
+		if(Distance_Left <= THRESHOLD)
 		{
+			__HAL_TIM_SET_COUNTER(&htim2, 0); // reset timer
 			HAL_TIM_Base_Start_IT(&htim2);
 			mode = TURN_LEFT;
-//			time(&start_turning);
 		}
-		else if(distance2 <= THRESHOLD)
+		else if(Distance_Right <= THRESHOLD)
 		{
+			__HAL_TIM_SET_COUNTER(&htim2, 0); // reset timer
 			HAL_TIM_Base_Start_IT(&htim2);
 			mode = TURN_RIGHT;
-//			time(&start_turning);
 		}
-//		else if(distance1 > THRESHOLD && distance2 > THRESHOLD)
-//			mode = STRAIGHT;
-		switch (mode) {
-			case STRAIGHT:
-				setAngle(90);
-				break;
-			case TURN_LEFT:
-					setAngle(140);
-				break;
-			case TURN_RIGHT:
-				setAngle(40);
-				break;
-		}
-//			if (time_counter - start_turning >= Turning_Duration)
-//			{
-//				setAngle(90);
-//			}
 	}
-
+	controlMode();
   /* USER CODE END 3 */
 }
 
@@ -286,9 +245,21 @@ static void MX_CAN_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN CAN_Init 2 */
+	/* USER CODE BEGIN CAN_Init 2 */
+	CAN_FilterTypeDef canfilterconfig;
 
-  /* USER CODE END CAN_Init 2 */
+	canfilterconfig.FilterActivation = CAN_FILTER_ENABLE;
+	canfilterconfig.FilterBank = 0;
+	canfilterconfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+	canfilterconfig.FilterIdHigh = 0x012 << 5;
+	canfilterconfig.FilterIdLow = 0x0000;
+	canfilterconfig.FilterMaskIdHigh = 0x012 << 5;
+	canfilterconfig.FilterMaskIdLow = 0x0000;
+	canfilterconfig.FilterMode = CAN_FILTERMODE_IDMASK;
+	canfilterconfig.FilterScale = CAN_FILTERSCALE_32BIT;
+
+	HAL_CAN_ConfigFilter(&hcan, &canfilterconfig);
+	/* USER CODE END CAN_Init 2 */
 
 }
 
@@ -540,8 +511,6 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 static void setAngle(uint8_t Angle) {
-	Angle = Angle > MAX_ANGLE ? MAX_ANGLE : Angle;
-	Angle = Angle < MIN_ANGLE ? MIN_ANGLE : Angle;
 	uint32_t newCCR = 50 * Angle / 9 + 250;
 	htim4.Instance->CCR1 = newCCR;
 }
@@ -551,24 +520,56 @@ void genPWM(TIM_HandleTypeDef *htim, uint32_t channel, float duty_cycle)
 	float load = (duty_cycle / 100) * htim->Instance->ARR;
 	__HAL_TIM_SET_COMPARE(htim, channel, (uint16_t)load);
 }
-//
-//static uint8_t crc8(uint8_t *data, uint8_t length) {
-//	uint8_t crc = 0;
-//	uint8_t polynomial = 0x8C;  // CRC-8 SAE J1850 polynomial
-//
-//	for (uint8_t i = 0; i < length; i++) {
-//		crc ^= data[i];
-//		for (uint8_t j = 8; j; j--) {
-//			if (crc & 0x80) crc = (crc << 1) ^ polynomial;
-//			else crc <<= 1;
-//		}
-//	}
-//	return crc;
-//}
 
-static void decodeNumber(uint16_t *distance1, uint16_t *distance2) {
-	*distance1 = (RxData[1] << 8) | RxData[0];
-	*distance2 = (RxData[3] << 8) | RxData[2];
+static void decodeNumber(uint16_t *number, uint8_t index) {
+	*number = (RxData[index+1] << 8) | RxData[index];
+}
+
+static uint8_t crc8(uint8_t *data, uint8_t length) {
+	uint8_t crc = 0;
+	uint8_t polynomial = 0x8C;  // CRC-8 SAE J1850 polynomial
+
+	for (uint8_t i = 0; i < length; i++) {
+		crc ^= data[i];
+		for (uint8_t j = 8; j; j--) {
+			if (crc & 0x80) crc = (crc << 1) ^ polynomial;
+			else crc <<= 1;
+		}
+	}
+	return crc;
+}
+
+static void controlMode(){
+	switch (mode) {
+		case STRAIGHT:
+			setAngle(ANGLE_NORMAL);
+			genPWM(&htim1, TIM_CHANNEL_4, 20);
+			break;
+		case TURN_LEFT:
+			setAngle(ANGLE_LEFT);
+			genPWM(&htim1, TIM_CHANNEL_4, 30);
+			break;
+		case TURN_RIGHT:
+			setAngle(ANGLE_RIGHT);
+			genPWM(&htim1, TIM_CHANNEL_4, 30);
+			break;
+	}
+}
+
+
+// Interrupt Function
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
+	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData);
+	if (RxHeader.StdId == 0x012) {
+		datacheck = 1;
+	}
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if(htim->Instance == TIM2){
+		mode = STRAIGHT;
+		HAL_TIM_Base_Stop_IT(&htim2);
+	}
 }
 /* USER CODE END 4 */
 

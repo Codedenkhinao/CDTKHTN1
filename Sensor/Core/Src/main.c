@@ -66,8 +66,9 @@ static void MX_CAN_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void encodeDistance(uint16_t number1, uint16_t number2);
-uint8_t crc8(uint8_t *data, uint8_t length);
+static void encodeNumber(uint16_t number1, uint8_t index);
+static uint8_t crc8(uint8_t *data, uint8_t length);
+static uint16_t getDistance(VL53L1X *sensor);
 /* USER CODE END 0 */
 
 /**
@@ -129,35 +130,19 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	uint16_t distance1 = 0, distance2 = 0;
+	uint16_t Distance_Left = 0, Distance_Right = 0;
 	while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 		//	Sending message
-		distance1 = TOF_GetDistance(&sensor1);
-		if (distance1 == 0xFFFF) {
-			HAL_Init();
-			SystemClock_Config();
-			MX_GPIO_Init();
-			MX_I2C1_Init();
-			MX_USART1_UART_Init();
-		}
-		distance1 = TOF_GetDistance(&sensor1);
+		Distance_Left = getDistance(&sensor1);
+		Distance_Right = getDistance(&sensor2);
 
-		distance2 = TOF_GetDistance(&sensor2);
-		if (distance2 == 0xFFFF) {
-			HAL_Init();
-			SystemClock_Config();
-			MX_GPIO_Init();
-			MX_I2C1_Init();
-			MX_USART1_UART_Init();
-		}
-		distance2 = TOF_GetDistance(&sensor2);
-
-		encodeDistance(distance1, distance2);
+		encodeNumber(Distance_Left, 0);
+		encodeNumber(Distance_Right, 2);
 		//	store checksum
-//		TxData[4] = crc8(TxData, 4);
+		TxData[4] = crc8(TxData, 4);
 		sprintf(msg, "\n\rLeft: %x%x mm\n\rRight: %x%x mm",
 				TxData[1], TxData[0], TxData[3], TxData[2]);
 		if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData,
@@ -267,7 +252,7 @@ static void MX_CAN_Init(void)
 
 
 /* USER CODE BEGIN 4 */
-uint8_t crc8(uint8_t *data, uint8_t length) {
+static uint8_t crc8(uint8_t *data, uint8_t length) {
 	uint8_t crc = 0;
 	uint8_t polynomial = 0x8C;  // CRC-8 SAE J1850 polynomial
 
@@ -281,14 +266,22 @@ uint8_t crc8(uint8_t *data, uint8_t length) {
 	return crc;
 }
 
-void encodeDistance(uint16_t number1,uint16_t number2) {
-	//	store number1
-	TxData[0] = number1 & 0xFF;
-	TxData[1] = (number1 >> 8) & 0xFF;
-	//	store number2
-	TxData[2] = number2 & 0xFF;
-	TxData[3] = (number2 >> 8) & 0xFF;
+static void encodeNumber(uint16_t number, uint8_t index) {
+	TxData[index] = number & 0xFF;
+	TxData[index+1] = (number >> 8) & 0xFF;
+}
 
+static uint16_t getDistance(VL53L1X *sensor){
+	uint16_t distance = TOF_GetDistance(sensor);
+	if (distance == 0xFFFF) {
+		HAL_Init();
+		SystemClock_Config();
+		MX_GPIO_Init();
+		MX_I2C1_Init();
+		MX_USART1_UART_Init();
+	}
+	distance = TOF_GetDistance(sensor);
+	return distance;
 }
 /* USER CODE END 4 */
 

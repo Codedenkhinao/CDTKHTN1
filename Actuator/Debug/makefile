@@ -66,8 +66,8 @@ all: main-build
 main-build: Actuator.elf secondary-outputs
 
 # Tool invocations
-Actuator.elf Actuator.map: $(OBJS) $(USER_OBJS) E:\CDTKHTN\Actuator\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Actuator.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"E:\CDTKHTN\Actuator\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Actuator.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Actuator.elf Actuator.map: $(OBJS) $(USER_OBJS) D:\CDTKHTN1\Actuator\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Actuator.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"D:\CDTKHTN1\Actuator\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Actuator.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
