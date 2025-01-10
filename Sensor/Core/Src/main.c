@@ -49,9 +49,8 @@ CAN_HandleTypeDef hcan;
 
 
 /* USER CODE BEGIN PV */
-//uint8_t rxData[8]={0,0,0,0,0,0,0,0};
 uint8_t TxData[8];
-//CAN_RxHeaderTypeDef rxHeader;
+
 CAN_TxHeaderTypeDef TxHeader;
 uint32_t TxMailbox;
 /* USER CODE END PV */
@@ -66,7 +65,7 @@ static void MX_CAN_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static void encodeNumber(uint16_t number1, uint8_t index);
+static void encodeNumber(uint16_t number, uint8_t index);
 static uint8_t crc8(uint8_t *data, uint8_t length);
 static uint16_t getDistance(VL53L1X *sensor);
 /* USER CODE END 0 */
@@ -132,9 +131,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	uint16_t Distance_Left = 0, Distance_Right = 0;
 	while (1) {
-    /* USER CODE END WHILE */
+		/* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+		/* USER CODE BEGIN 3 */
 		//	Sending message
 		Distance_Left = getDistance(&sensor1);
 		Distance_Right = getDistance(&sensor2);
@@ -147,7 +146,8 @@ int main(void)
 				TxData[1], TxData[0], TxData[3], TxData[2]);
 		if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData,
 				&TxMailbox) == HAL_OK) {
-			HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+			HAL_UART_Transmit(&huart1, (uint8_t*) msg,
+					strlen(msg), 100);
 		}
 //		HAL_Delay(20);
 	}

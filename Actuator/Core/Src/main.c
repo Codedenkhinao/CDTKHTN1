@@ -35,10 +35,10 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define ANGLE_NORMAL 90
-#define ANGLE_LEFT 40
-#define ANGLE_RIGHT 140
+#define ANGLE_LEFT 50
+#define ANGLE_RIGHT 130
 
-#define THRESHOLD 600
+#define THRESHOLD 650
 
 typedef enum {
 	STRAIGHT = 0,
@@ -136,7 +136,7 @@ int main(void)
 	HAL_CAN_Start(&hcan);
 
 	HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, SET);
-	HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, SET);
+//	HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, SET);
 
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
@@ -158,20 +158,18 @@ int main(void)
 			decodeNumber(&Distance_Right, 2);
 		}
 
-		if(Distance_Left <= THRESHOLD)
-		{
-			__HAL_TIM_SET_COUNTER(&htim2, 0); // reset timer
-			HAL_TIM_Base_Start_IT(&htim2);
-			mode = TURN_LEFT;
-		}
-		else if(Distance_Right <= THRESHOLD)
-		{
-			__HAL_TIM_SET_COUNTER(&htim2, 0); // reset timer
+		if (Distance_Left <= THRESHOLD) {
+//			__HAL_TIM_SET_COUNTER(&htim2, 0); // reset timer
 			HAL_TIM_Base_Start_IT(&htim2);
 			mode = TURN_RIGHT;
 		}
+		else if (Distance_Right <= THRESHOLD) {
+//			__HAL_TIM_SET_COUNTER(&htim2, 0); // reset timer
+			HAL_TIM_Base_Start_IT(&htim2);
+			mode = TURN_LEFT;
+		}
+		controlMode();
 	}
-	controlMode();
   /* USER CODE END 3 */
 }
 
@@ -547,11 +545,11 @@ static void controlMode(){
 			break;
 		case TURN_LEFT:
 			setAngle(ANGLE_LEFT);
-			genPWM(&htim1, TIM_CHANNEL_4, 30);
+			genPWM(&htim1, TIM_CHANNEL_4, 24);
 			break;
 		case TURN_RIGHT:
 			setAngle(ANGLE_RIGHT);
-			genPWM(&htim1, TIM_CHANNEL_4, 30);
+			genPWM(&htim1, TIM_CHANNEL_4, 24);
 			break;
 	}
 }

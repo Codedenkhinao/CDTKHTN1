@@ -1,7 +1,7 @@
-../Core/Src/main.c:78:5:main	3
-../Core/Src/main.c:161:6:SystemClock_Config	3
-../Core/Src/main.c:201:13:MX_CAN_Init	2
-../Core/Src/main.c:255:16:crc8	4
-../Core/Src/main.c:269:13:encodeNumber	1
-../Core/Src/main.c:274:17:getDistance	2
-../Core/Src/main.c:292:6:Error_Handler	1
+../Core/Src/main.c:77:5:main	3
+../Core/Src/main.c:160:6:SystemClock_Config	3
+../Core/Src/main.c:200:13:MX_CAN_Init	2
+../Core/Src/main.c:254:16:crc8	4
+../Core/Src/main.c:268:13:encodeNumber	1
+../Core/Src/main.c:273:17:getDistance	2
+../Core/Src/main.c:291:6:Error_Handler	1
