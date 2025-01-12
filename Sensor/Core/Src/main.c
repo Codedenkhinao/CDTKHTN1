@@ -52,7 +52,7 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-uint8_t TxData[8];
+uint8_t TxData[5];
 
 CAN_TxHeaderTypeDef TxHeader;
 uint32_t TxMailbox;
@@ -109,20 +109,20 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 	HAL_CAN_Start(&hcan); 	//Bat dau CAN
-	//Cau hinh Goi tin
+	//Configure the message
 	TxHeader.StdId = 0x012;
 	TxHeader.DLC = 5;
 	TxHeader.IDE = CAN_ID_STD;
 	TxHeader.RTR = CAN_RTR_DATA;
 
-	// Cau hinh 2 sensor
+	// init 2 sensors
 	VL53L1X sensor1, sensor2;
 	TOF_InitStruct(&sensor1, &hi2c1, 0x20, XSHUT1_GPIO_Port,
 	XSHUT1_Pin);
 	TOF_InitStruct(&sensor2, &hi2c1, 0x26, XSHUT2_GPIO_Port,
 	XSHUT2_Pin);
 
-	// Kiem tra 2 sensor
+	// Checking sensors, if it's fail, stop the system
 	char msg[100];
 	VL53L1X *sensors[] = {&sensor1, &sensor2};
 	int status = TOF_BootMultipleSensors(sensors, 2);
@@ -141,21 +141,21 @@ int main(void)
     /* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
-		//	Sending message
+		// get distance value from sensor
 		Distance_Left = getDistance(&sensor1);
 		Distance_Right = getDistance(&sensor2);
 
-		//	Sending data to Actuator Node
+		// encode distance and store it in TxData
 		encodeNumber(Distance_Left, 0);
 		encodeNumber(Distance_Right, 2);
 
-		//	Store checksum
+		// Store checksum
 		TxData[4] = crc8(TxData, 4);
 
 		sprintf(msg, "\n\rLeft: %x%x mm\n\rRight: %x%x mm",
 				TxData[1], TxData[0], TxData[3], TxData[2]);
 
-		// Check done Sending
+		// Check Sending is successful
 		if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData,
 				&TxMailbox) == HAL_OK) {
 			HAL_UART_Transmit(&huart1, (uint8_t*) msg,
