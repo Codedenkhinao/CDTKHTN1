@@ -37,8 +37,8 @@
 #define ANGLE_NORMAL 90
 #define ANGLE_LEFT 50
 #define ANGLE_RIGHT 130
-
-#define THRESHOLD 650
+// THRESHOLD is 500 mm
+#define THRESHOLD 500
 
 typedef enum {
 	STRAIGHT = 0,
@@ -63,7 +63,7 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 CAN_RxHeaderTypeDef RxHeader;
-uint8_t RxData[8];
+uint8_t RxData[5];
 uint8_t receive_check = 0;
 
 Mode mode = STRAIGHT;
@@ -128,22 +128,21 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  //	Initialize local variable
-	uint16_t Distance_Left, Distance_Right;
-
-	HAL_CAN_ActivateNotification(&hcan,
-	CAN_IT_RX_FIFO0_MSG_PENDING);
-	HAL_CAN_Start(&hcan);
-
-	HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, SET);
-//	HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, SET);
-
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-	setPWMChannelDutyCycle(&htim1, TIM_CHANNEL_4, 20);
-
-	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
-	//genPWM(&htim1, TIM_CHANNEL_1, 40);
+  //Initialize local variable
+  uint16_t Distance_Left, Distance_Right;
+  // init peripheral
+  HAL_CAN_Start(&hcan);
+	
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+	
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+  // configure car go forward
+  HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, SET);
+  setPWMChannelDutyCycle(&htim1, TIM_CHANNEL_4, 20);
+  // enable interrupt receive
+  HAL_CAN_ActivateNotification(&hcan,
+  CAN_IT_RX_FIFO0_MSG_PENDING);
   /* USER CODE END 2 */
 
   /* Infinite loop */
