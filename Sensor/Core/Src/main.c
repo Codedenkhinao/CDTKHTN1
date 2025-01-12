@@ -115,12 +115,14 @@ int main(void)
 	TxHeader.IDE = CAN_ID_STD;
 	TxHeader.RTR = CAN_RTR_DATA;
 
+	// Cau hinh 2 sensor
 	VL53L1X sensor1, sensor2;
 	TOF_InitStruct(&sensor1, &hi2c1, 0x20, XSHUT1_GPIO_Port,
 	XSHUT1_Pin);
 	TOF_InitStruct(&sensor2, &hi2c1, 0x26, XSHUT2_GPIO_Port,
 	XSHUT2_Pin);
 
+	// Kiem tra 2 sensor
 	char msg[100];
 	VL53L1X *sensors[] = {&sensor1, &sensor2};
 	int status = TOF_BootMultipleSensors(sensors, 2);
@@ -138,23 +140,27 @@ int main(void)
 	while (1) {
     /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+		/* USER CODE BEGIN 3 */
 		//	Sending message
 		Distance_Left = getDistance(&sensor1);
 		Distance_Right = getDistance(&sensor2);
 
+		//	Sending data to Actuator Node
 		encodeNumber(Distance_Left, 0);
 		encodeNumber(Distance_Right, 2);
-		//	store checksum
+
+		//	Store checksum
 		TxData[4] = crc8(TxData, 4);
+
 		sprintf(msg, "\n\rLeft: %x%x mm\n\rRight: %x%x mm",
 				TxData[1], TxData[0], TxData[3], TxData[2]);
+
+		// Check done Sending
 		if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData,
 				&TxMailbox) == HAL_OK) {
 			HAL_UART_Transmit(&huart1, (uint8_t*) msg,
 					strlen(msg), 100);
 		}
-//		HAL_Delay(20);
 	}
   /* USER CODE END 3 */
 }
@@ -344,6 +350,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+// Checksum CRC-8 SAE J1850
 static uint8_t crc8(uint8_t *data, uint8_t length) {
 	uint8_t crc = 0;
 	uint8_t polynomial = 0x8C;  // CRC-8 SAE J1850 polynomial
