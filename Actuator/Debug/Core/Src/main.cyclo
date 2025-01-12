@@ -7,7 +7,7 @@
 ../Core/Src/main.c:452:13:MX_USART1_UART_Init	2
 ../Core/Src/main.c:485:13:MX_GPIO_Init	1
 ../Core/Src/main.c:511:13:setAngle	1
-../Core/Src/main.c:516:6:genPWM	4
+../Core/Src/main.c:516:13:setPWMChannelDutyCycle	4
 ../Core/Src/main.c:522:13:decodeNumber	1
 ../Core/Src/main.c:526:16:crc8	4
 ../Core/Src/main.c:540:13:controlMode	5

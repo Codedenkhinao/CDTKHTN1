@@ -64,7 +64,7 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 CAN_RxHeaderTypeDef RxHeader;
 uint8_t RxData[8];
-uint8_t datacheck = 0;
+uint8_t receive_check = 0;
 
 Mode mode = STRAIGHT;
 /* USER CODE END PV */
@@ -84,7 +84,7 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 static void setAngle(uint8_t Angle);
-static void genPWM(TIM_HandleTypeDef *htim, uint32_t channel, float duty_cycle);
+static void setPWMChannelDutyCycle(TIM_HandleTypeDef *htim, uint32_t channel, float duty_cycle);
 static void decodeNumber(uint16_t *distance1, uint8_t index);
 static uint8_t crc8(uint8_t *data, uint8_t length);
 static void controlMode();
@@ -140,7 +140,7 @@ int main(void)
 
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-	genPWM(&htim1, TIM_CHANNEL_4, 20);
+	setPWMChannelDutyCycle(&htim1, TIM_CHANNEL_4, 20);
 
 	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
 	//genPWM(&htim1, TIM_CHANNEL_1, 40);
@@ -152,19 +152,22 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		if (datacheck == 1 && crc8(RxData, 4) == RxData[4]) {
-			datacheck = 0;
+		// if having received message and message right
+		if (receive_check == 1 && crc8(RxData, 4) == RxData[4]) {
+			receive_check = 0;
 			decodeNumber(&Distance_Left, 0);
 			decodeNumber(&Distance_Right, 2);
 		}
 
-		if (Distance_Left <= THRESHOLD) {
-//			__HAL_TIM_SET_COUNTER(&htim2, 0); // reset timer
+		if (Distance_Left < Distance_Right && Distance_Left <= THRESHOLD) {
+			// turn right and begin counter
+			__HAL_TIM_SET_COUNTER(&htim2, 0);
 			HAL_TIM_Base_Start_IT(&htim2);
 			mode = TURN_RIGHT;
 		}
-		else if (Distance_Right <= THRESHOLD) {
-//			__HAL_TIM_SET_COUNTER(&htim2, 0); // reset timer
+		else if (Distance_Right < Distance_Left && Distance_Right <= THRESHOLD) {
+			// turn left and begin counter
+			__HAL_TIM_SET_COUNTER(&htim2, 0);
 			HAL_TIM_Base_Start_IT(&htim2);
 			mode = TURN_LEFT;
 		}
@@ -243,7 +246,7 @@ static void MX_CAN_Init(void)
   {
     Error_Handler();
   }
-	/* USER CODE BEGIN CAN_Init 2 */
+  /* USER CODE BEGIN CAN_Init 2 */
 	CAN_FilterTypeDef canfilterconfig;
 
 	canfilterconfig.FilterActivation = CAN_FILTER_ENABLE;
@@ -257,7 +260,7 @@ static void MX_CAN_Init(void)
 	canfilterconfig.FilterScale = CAN_FILTERSCALE_32BIT;
 
 	HAL_CAN_ConfigFilter(&hcan, &canfilterconfig);
-	/* USER CODE END CAN_Init 2 */
+  /* USER CODE END CAN_Init 2 */
 
 }
 
@@ -513,7 +516,7 @@ static void setAngle(uint8_t Angle) {
 	htim4.Instance->CCR1 = newCCR;
 }
 
-void genPWM(TIM_HandleTypeDef *htim, uint32_t channel, float duty_cycle)
+static void setPWMChannelDutyCycle(TIM_HandleTypeDef *htim, uint32_t channel, float duty_cycle)
 {
 	float load = (duty_cycle / 100) * htim->Instance->ARR;
 	__HAL_TIM_SET_COMPARE(htim, channel, (uint16_t)load);
@@ -541,15 +544,15 @@ static void controlMode(){
 	switch (mode) {
 		case STRAIGHT:
 			setAngle(ANGLE_NORMAL);
-			genPWM(&htim1, TIM_CHANNEL_4, 20);
+			setPWMChannelDutyCycle(&htim1, TIM_CHANNEL_4, 20);
 			break;
 		case TURN_LEFT:
-			setAngle(ANGLE_LEFT);
-			genPWM(&htim1, TIM_CHANNEL_4, 24);
+			setAngle(ANGLE_RIGHT);
+			setPWMChannelDutyCycle(&htim1, TIM_CHANNEL_4, 24);
 			break;
 		case TURN_RIGHT:
-			setAngle(ANGLE_RIGHT);
-			genPWM(&htim1, TIM_CHANNEL_4, 24);
+			setAngle(ANGLE_LEFT);
+			setPWMChannelDutyCycle(&htim1, TIM_CHANNEL_4, 24);
 			break;
 	}
 }
@@ -559,12 +562,13 @@ static void controlMode(){
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData);
 	if (RxHeader.StdId == 0x012) {
-		datacheck = 1;
+		receive_check = 1;
 	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim->Instance == TIM2){
+		// after 3s, car go straight
 		mode = STRAIGHT;
 		HAL_TIM_Base_Stop_IT(&htim2);
 	}

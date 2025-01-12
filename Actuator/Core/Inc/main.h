@@ -63,6 +63,8 @@ void Error_Handler(void);
 #define R_EN_GPIO_Port GPIOB
 #define L_EN_Pin GPIO_PIN_15
 #define L_EN_GPIO_Port GPIOB
+#define servo_Pin GPIO_PIN_6
+#define servo_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
