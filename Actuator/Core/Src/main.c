@@ -156,7 +156,7 @@ int main(void)
 			receive_check = 0;
 			decodeNumber(&Distance_Left, 0);
 			decodeNumber(&Distance_Right, 2);
-		}
+		} else continue
 
 		if (Distance_Left < Distance_Right && Distance_Left <= THRESHOLD) {
 			// turn right and begin counter
